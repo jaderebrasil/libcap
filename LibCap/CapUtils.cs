@@ -1,9 +1,7 @@
 using System.IO;
 using System.Collections.Generic;
 using Newtonsoft.Json;
-using System;
 using CapJson = LibCap.Json;
-using CapResListFile = LibCap.CapResult<System.Collections.Generic.List<LibCap.CapUtils.FileData>>;
 
 namespace LibCap {
     public enum AssetType
@@ -57,43 +55,43 @@ namespace LibCap {
             return false;
         }
         
-        internal static CapErrOption VerifyFileForErrors(string path, FileType type) {
+        internal static CapError VerifyFileForErrors(string path, FileType type) {
             if (string.IsNullOrEmpty(path)) {
-                return CapErrOption.SomeErr(new CapError(
+                return new CapError(
                     CapError.ErrorTypes.FileIsInvalid,
                     "the parameter `path` can't be empty or null."   
-                )); 
+                ); 
             }
             
             if (!File.Exists(path)) {
-                return CapErrOption.SomeErr(new CapError(
+                return new CapError(
                     CapError.ErrorTypes.FileNotFound,
                     string.Format("{0} not found.", path)  
-                ));
+                );
             }
 
             
             switch (type) {
                 case FileType.JSON:
                     if (path.Length > 5 && path.Substring(path.Length - 5).Equals(".json"))
-                        return CapErrOption.NoErr();
+                        return CapError.NoError();
                     break;
 
                 case FileType.PNG:
                     if (path.Length > 4 && path.Substring(path.Length - 4).Equals(".png"))
-                        return CapErrOption.NoErr();
+                        return CapError.NoError();
                     break;
             }
             
-            return CapErrOption.SomeErr(new CapError(
+            return new CapError(
                 CapError.ErrorTypes.FileIsInvalid,
                 string.Format("{0} should be a {1} file.", path, type.ToString("g"))
-            ));
+            );
         }
         
-        internal static CapResult<string> FileTsxToJson(string tsxPath, string parentDir) {
+        internal static (string Ok, CapError Error) FileTsxToJson(string tsxPath, string parentDir) {
             if (tsxPath.Length < 5)
-                return CapResult<string>.Err(new CapError(
+                return (null, new CapError(
                     CapError.ErrorTypes.FileIsInvalid,
                     string.Format("{0} is too short to be a valid filename.", tsxPath)
                 ));
@@ -102,22 +100,20 @@ namespace LibCap {
             var fullPath = Path.GetFullPath(jsonPath, parentDir);
             
             if (File.Exists(fullPath))
-                return CapResult<string>.Ok(fullPath);
+                return (fullPath, CapError.NoError());
             
-            return CapResult<string>.Err(new CapError(
+            return (null, new CapError(
                 CapError.ErrorTypes.FileNotFound,
                 string.Format("{0} was not found.", fullPath)
             ));
         }
         
-        internal static CapResListFile ParseMapFile(string jsonPath) {
+        internal static (List<FileData> Ok, CapError Error) ParseMapFile(string jsonPath) {
             var res = new List<FileData>();
             
-            if (!IsValidFile(jsonPath, FileType.JSON)) {
-                return CapResListFile.Err(new CapError(
-                    CapError.ErrorTypes.FileIsInvalid,
-                    string.Format("{0} is invalid.", jsonPath)
-                ));
+            var checkError = VerifyFileForErrors(jsonPath, FileType.JSON);
+            if (checkError.HasError) {
+                return (null, checkError);
             }
             
             var parentDir = Directory.GetParent(jsonPath).FullName;
@@ -131,32 +127,30 @@ namespace LibCap {
                 if (len > 4 && source.Substring(len - 4).Equals(".tsx")) {
                     var result = FileTsxToJson(source, parentDir);
                     
-                    if (result.IsOk) {
-                        source = result.OkValue();
-                    } else {
-                        return CapResListFile.Err(result.ErrValue());
-                    }
+                    if (result.Error.HasError)
+                        return (null, result.Error);
+
+                    source = result.Ok;
                 }
                 
                 var tilesetResult = ParseTilesetFile(source);
-                if (!tilesetResult.IsOk) {
-                    return CapResListFile.Err(tilesetResult.ErrValue());
+                if (tilesetResult.Error.HasError) {
+                    return (null, tilesetResult.Error);
                 }
 
-                res.AddRange(tilesetResult.OkValue());
+                res.AddRange(tilesetResult.Ok);
             }
             
             res.Add(new FileData(jsonPath, FileType.JSON));
-
-            return CapResListFile.Ok(res);
+            return (res, CapError.NoError());
         }
         
-        internal static CapResListFile ParseTilesetFile(string jsonPath) {
+        internal static (List<FileData> Ok, CapError Error) ParseTilesetFile(string jsonPath) {
             var res = new List<FileData>();
             
-            var check = VerifyFileForErrors(jsonPath, FileType.JSON);
-            if (check.HasSomeError) {
-                return CapResListFile.Err(check.ErrValue());
+            var errorCheck = VerifyFileForErrors(jsonPath, FileType.JSON);
+            if (errorCheck.HasError) {
+                return (null, errorCheck);
             }
             
             string json = File.ReadAllText(jsonPath);
@@ -165,15 +159,15 @@ namespace LibCap {
             var parentDir = Directory.GetParent(jsonPath).FullName;
             var imagePath = Path.GetFullPath(tileset.image, parentDir);
             
-            check = VerifyFileForErrors(imagePath, FileType.PNG);
-            if (check.HasSomeError) {
-                return CapResListFile.Err(check.ErrValue());
+            errorCheck = VerifyFileForErrors(imagePath, FileType.PNG);
+            if (errorCheck.HasError) {
+                return (null, errorCheck);
             }
             
             res.Add(new FileData(jsonPath, FileType.JSON));
             res.Add(new FileData(imagePath, FileType.PNG));
 
-            return CapResListFile.Ok(res);
+            return (res, CapError.NoError());
         }
     }
 }

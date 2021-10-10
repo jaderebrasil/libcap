@@ -12,12 +12,12 @@ namespace LibCap
 
         public static void GambiarrusTestus() {
             var filesResult = CapUtils.ParseMapFile("/home/jader/imgs/tiled_maps/Dungeon_tococumba/json/Dungeon_tococumba.json");
-            if (!filesResult.IsOk) {
-                Console.WriteLine(filesResult.ErrValue().Msg);
+            if (filesResult.Error.HasError) {
+                Console.WriteLine(filesResult.Error.Msg);
                 return;
             }
 
-            foreach (var file in filesResult.OkValue()) {
+            foreach (var file in filesResult.Ok) {
                 Console.WriteLine(string.Format(
                     "Found {0} file at {1}",
                     file.Type.ToString("g"),
@@ -43,28 +43,28 @@ namespace LibCap
         //     It fails if the file or its dependents doesn't exists, 
         //     the type is not valid or the file was already contained in CapBuilder.
         // 
-        public CapErrOption AddAsset(string jsonPath, AssetType type) {
+        public CapError AddAsset(string jsonPath, AssetType type) {
             switch (type) {
                 case AssetType.MAP:
                     var filesResult = CapUtils.ParseMapFile(jsonPath);
                     
-                    if (!filesResult.IsOk) {
-                        return CapErrOption.SomeErr(filesResult.ErrValue());
+                    if (filesResult.Error.HasError) {
+                        return filesResult.Error;
                     }
 
-                    var files = filesResult.OkValue();
+                    var files = filesResult.Ok;
                     foreach (var file in files) {
                         AddFile(file.Name, file.Type);
                     }
 
-                    return CapErrOption.NoErr();
+                    return CapError.NoError();
                     
                 case AssetType.TILESET:
                     break;
             }
             
             /* TODO */
-            return CapErrOption.NoErr();
+            return CapError.NoError();
         }
 
         //
