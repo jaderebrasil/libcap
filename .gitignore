@@ -7,3 +7,5 @@ org
 
 .tmp
 */.tmp
+
+*.zip
