@@ -1,6 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
+using Newtonsoft.Json;
+using CapJson = LibCap.Json;
+using System.Linq;
 
 //using Newtonsoft.Json
 
@@ -8,9 +11,87 @@ namespace LibCap
 {
     public class CapBuilder
     {
-        private Dictionary<string, CapUtils.FileData> _content = new Dictionary<string, CapUtils.FileData>();
+        private Dictionary<string, FileData> _content = new Dictionary<string, FileData>();
         public int Count => _content.Count;
-        public List<string> FileList => new List<string>(_content.Keys);
+        private string _tmpPath;
+
+        public CapBuilder()
+        {
+            _content = new Dictionary<string, FileData>();
+            _tmpPath = Path.GetFullPath(".tmp/CapBuilder/", Directory.GetCurrentDirectory());
+
+            if (Directory.Exists(_tmpPath)) {
+                Directory.Delete(_tmpPath, true);
+            }
+
+            Directory.CreateDirectory(_tmpPath);
+        }
+        
+        ~CapBuilder()
+        {
+            Directory.Delete(_tmpPath, true);
+        }
+
+        private bool CheckDependencies() {
+            string json, assetName;
+
+            foreach (var (path, file) in _content) {
+                switch (file.Asset, file.Type) {
+                    case (AssetType.MAP, FileType.JSON):
+                        json = File.ReadAllText(file.TmpPath(_tmpPath));
+                        dynamic map = JsonConvert.DeserializeObject(json);
+                        var parentDir = Directory.GetParent(path).FullName;
+
+                        foreach (var ts in map["tilesets"])  {
+                            assetName = CapUtils.GetAssetNameFromPath(ts["source"].ToString());
+
+                            try {
+                                var tileFile = _content.First(f => f.Value.Type == FileType.JSON
+                                             && string.Equals(f.Value.AssetName, assetName));
+                                
+                                ts["source"] = Path.GetRelativePath(
+                                    Path.GetFullPath("Maps", _tmpPath), 
+                                    tileFile.Value.TmpPath(_tmpPath)
+                                );
+                            } catch {
+                                return false;
+                            }
+                        }
+                        
+                        json = JsonConvert.SerializeObject(map, Formatting.Indented);
+
+                        File.Delete(file.TmpPath(_tmpPath));
+                        File.WriteAllText(file.TmpPath(_tmpPath), json);
+                        break;
+                        
+                    case (AssetType.TILESET, FileType.JSON):
+                        json = File.ReadAllText(file.TmpPath(_tmpPath));
+                        dynamic tileset = JsonConvert.DeserializeObject(json);
+                        
+                        assetName = CapUtils.GetAssetNameFromPath(path);
+                        var tilesetImgName = Path.GetFileName(tileset["image"].ToString());
+
+                        try {
+                            var imgFile = _content.First(i => string.Equals(i.Value.AssetName, assetName)
+                                         && string.Equals(i.Value.Name, tilesetImgName));
+                            
+                            tileset["image"] = imgFile.Value.Name;
+                            json = JsonConvert.SerializeObject(tileset, Formatting.Indented);
+                            
+                            File.Delete(file.TmpPath(_tmpPath));
+                            File.WriteAllText(file.TmpPath(_tmpPath), json);
+                        } catch {
+                            return false;
+                        }
+                        break;
+                    
+                    default:
+                        break;
+                }
+            }
+            
+            return true;
+        }
 
         //
         // Summary:
@@ -30,8 +111,8 @@ namespace LibCap
         //     the type is not valid or the file was already contained in CapBuilder.
         // 
         public CapError AddAsset(string jsonPath, AssetType type) {
-            (List<CapUtils.FileData> Ok, CapError Error) filesResult = (null, CapError.NoError());
-            List<CapUtils.FileData> files = filesResult.Ok;
+            (List<FileData> Ok, CapError Error) filesResult = (null, CapError.NoError());
+            List<FileData> files = filesResult.Ok;
 
             switch (type) {
                 case AssetType.MAP:
@@ -53,13 +134,27 @@ namespace LibCap
 
                     files = filesResult.Ok;
                     break;
-            }
-
-            foreach (var file in files) {
-                AddFile(file.Name, file.Type);
+            } foreach (var file in files) {
+                AddFile(file);
             }
             
             return CapError.NoError();
+        }
+        
+        internal void VerifyBuildDirs(string assetDir, string assetName) {
+            if (string.IsNullOrEmpty(assetDir.Trim()))
+                return;
+
+            var pathAssetDir = Path.GetFullPath(assetDir, _tmpPath);
+            if (!Directory.Exists(pathAssetDir))
+                Directory.CreateDirectory(pathAssetDir);
+            
+            if (string.IsNullOrEmpty(assetName))
+                return;
+
+            var pathAssetName = Path.GetFullPath(assetName, pathAssetDir);
+            if (!Directory.Exists(pathAssetName))
+                Directory.CreateDirectory(pathAssetName);
         }
 
         //
@@ -71,16 +166,18 @@ namespace LibCap
         //     the file doesn't exist, the type is not valid or the file
         //     was already contained in CapBuilder.
         // 
-        internal bool AddFile(string path, CapUtils.FileType type) {
-            if (!CapUtils.IsValidFile(path, type) || ContainsFile(path)) {
+        internal bool AddFile(FileData file) {
+            if (!CapUtils.IsValidFile(file.OriginalPath, file.Type) || ContainsFile(file.OriginalPath)) {
                 return false; 
             }
 
-            this._content.Add(path, new CapUtils.FileData() { 
-                Name = Path.GetFileName(path),
-                Type = type
-            });
+            VerifyBuildDirs(file.AssetDir, file.AssetName);
             
+            if (!File.Exists(file.TmpPath(_tmpPath))) {
+                File.Copy(file.OriginalPath, file.TmpPath(_tmpPath));
+                this._content.Add(file.OriginalPath, file);
+            }
+
             return true;
         }
         
@@ -95,6 +192,8 @@ namespace LibCap
         public bool RemoveFile(string path) {
             if (   !string.IsNullOrEmpty(path) 
                 && ContainsFile(path)) {
+                var file = this._content[path];
+                File.Delete(file.TmpPath(_tmpPath));
                 this._content.Remove(path);
                 return true;
             }
@@ -110,7 +209,7 @@ namespace LibCap
         //     True if the export was successful. If exists a file in
         //     `path` this function will fail unless `fReplace = true`;
         // 
-        public bool CreateCap(string path, bool fReplace) {
+        public bool ExportCap(string path, bool fReplace) {
             if (File.Exists(path)) {
                 if (!fReplace)
                     return false;
@@ -122,7 +221,11 @@ namespace LibCap
                 }
             }
             
-            return false;
+            if (!CheckDependencies())
+                return false;
+
+            ZipFile.CreateFromDirectory(_tmpPath, path);
+            return true;
         }
         
         //

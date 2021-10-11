@@ -4,3 +4,6 @@ org
 
 .fake
 .ionide
+
+.tmp
+*/.tmp

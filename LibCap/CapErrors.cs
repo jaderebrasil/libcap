@@ -2,10 +2,10 @@ namespace LibCap {
     public class CapError {
         public readonly ErrorTypes Type;
         public readonly string Msg;
-        public bool IsOk { get {return Type == ErrorTypes.NoErrors;} }
+        public bool IsOk { get {return Type == ErrorTypes.NoError;} }
         public enum ErrorTypes
         {
-            NoErrors,
+            NoError,
             FileNotFound,
             FileIsInvalid,
         }
@@ -16,7 +16,7 @@ namespace LibCap {
         }
         
         public static CapError NoError() {
-            return new CapError(ErrorTypes.NoErrors, null);
+            return new CapError(ErrorTypes.NoError, null);
         }
     }
 }

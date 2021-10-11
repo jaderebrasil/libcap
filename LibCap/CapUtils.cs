@@ -12,24 +12,45 @@ namespace LibCap {
         RPGSYSTEM
     }
     
-    internal static class CapUtils {
-        internal enum FileType {
-            JSON,
-            PNG
-        }
+    internal enum FileType {
+        JSON,
+        PNG
+    }
 
-        internal struct FileData
+    internal struct FileData
+    {
+        public readonly string Name;
+        public readonly string OriginalPath;
+        public readonly FileType Type;
+        public readonly AssetType Asset;
+        public readonly string AssetDir;
+        public readonly string AssetName;
+
+        public string RelativeTmpPath => string.Format("{0}{1}{2}", AssetDir, AssetName, Name);
+        public string TmpPath(string tmpPath) => Path.GetFullPath(RelativeTmpPath, tmpPath);
+        public FileData(string path, FileType type, AssetType asset, string assetName)
         {
-            public string Name;
-            public FileType Type;
-
-            public FileData(string name, FileType type)
-            {
-                Name = name;
-                Type = type;
+            Name = Path.GetFileName(path);
+            OriginalPath = path;
+            Type = type;
+            Asset = asset;
+            AssetName = assetName;
+            
+            AssetDir = "";
+            switch (asset) {
+                case AssetType.MAP:
+                    AssetDir = "Maps/";
+                    break; 
+                    
+                case AssetType.TILESET:
+                    AssetDir = "Tilesets/";
+                    break;
             }
         }
+    }
 
+    
+    internal static class CapUtils {
         //
         // Summary:
         //     Verify if the file `path` contains a compatible file for
@@ -142,7 +163,7 @@ namespace LibCap {
                 res.AddRange(tilesetResult.Ok);
             }
             
-            res.Add(new FileData(jsonPath, FileType.JSON));
+            res.Add(new FileData(jsonPath, FileType.JSON, AssetType.MAP, ""));
             return (res, CapError.NoError());
         }
         
@@ -172,10 +193,19 @@ namespace LibCap {
                 return (null, errorCheck);
             }
             
-            res.Add(new FileData(jsonPath, FileType.JSON));
-            res.Add(new FileData(imagePath, FileType.PNG));
+            var assetName = GetAssetNameFromPath(jsonPath);
+            res.Add(new FileData(jsonPath, FileType.JSON, AssetType.TILESET, assetName));
+            res.Add(new FileData(imagePath, FileType.PNG, AssetType.TILESET, assetName));
 
             return (res, CapError.NoError());
+        }
+        
+        internal static string GetAssetNameFromPath(string path) {
+            var assetName = Path.GetFileNameWithoutExtension(path);
+            if (!string.IsNullOrEmpty(assetName))
+                assetName += "/";
+            
+            return assetName;
         }
     }
 }
