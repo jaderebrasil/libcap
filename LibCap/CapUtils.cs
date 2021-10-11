@@ -69,7 +69,6 @@ namespace LibCap {
                     string.Format("{0} not found.", path)  
                 );
             }
-
             
             switch (type) {
                 case FileType.JSON:
@@ -112,7 +111,7 @@ namespace LibCap {
             var res = new List<FileData>();
             
             var checkError = VerifyFileForErrors(jsonPath, FileType.JSON);
-            if (checkError.HasError) {
+            if (!checkError.IsOk) {
                 return (null, checkError);
             }
             
@@ -127,14 +126,16 @@ namespace LibCap {
                 if (len > 4 && source.Substring(len - 4).Equals(".tsx")) {
                     var result = FileTsxToJson(source, parentDir);
                     
-                    if (result.Error.HasError)
+                    if (!result.Error.IsOk)
                         return (null, result.Error);
 
                     source = result.Ok;
+                } else {
+                    source = Path.GetFullPath(source, parentDir);
                 }
                 
                 var tilesetResult = ParseTilesetFile(source);
-                if (tilesetResult.Error.HasError) {
+                if (!tilesetResult.Error.IsOk) {
                     return (null, tilesetResult.Error);
                 }
 
@@ -149,7 +150,7 @@ namespace LibCap {
             var res = new List<FileData>();
             
             var errorCheck = VerifyFileForErrors(jsonPath, FileType.JSON);
-            if (errorCheck.HasError) {
+            if (!errorCheck.IsOk) {
                 return (null, errorCheck);
             }
             
@@ -157,10 +158,17 @@ namespace LibCap {
             var tileset = JsonConvert.DeserializeObject<CapJson.CapJsonTileset>(json);
 
             var parentDir = Directory.GetParent(jsonPath).FullName;
-            var imagePath = Path.GetFullPath(tileset.image, parentDir);
             
+            if (string.IsNullOrEmpty(tileset.image)) {
+                return (null, new CapError(
+                    CapError.ErrorTypes.FileIsInvalid, 
+                    string.Format("The tileset {0} has an empty image source.", jsonPath)
+                ));
+            }
+
+            var imagePath = Path.GetFullPath(tileset.image, parentDir);
             errorCheck = VerifyFileForErrors(imagePath, FileType.PNG);
-            if (errorCheck.HasError) {
+            if (!errorCheck.IsOk) {
                 return (null, errorCheck);
             }
             

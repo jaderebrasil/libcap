@@ -7,8 +7,6 @@ namespace cap
     {
         static void Main(string[] args)
         {
-            CapBuilder.GambiarrusTestus();
-            Console.WriteLine("Hello World!".Substring(6));
         }
     }
 }

@@ -9,22 +9,8 @@ namespace LibCap
     public class CapBuilder
     {
         private Dictionary<string, CapUtils.FileData> _content = new Dictionary<string, CapUtils.FileData>();
-
-        public static void GambiarrusTestus() {
-            var filesResult = CapUtils.ParseMapFile("/home/jader/imgs/tiled_maps/Dungeon_tococumba/json/Dungeon_tococumba.json");
-            if (filesResult.Error.HasError) {
-                Console.WriteLine(filesResult.Error.Msg);
-                return;
-            }
-
-            foreach (var file in filesResult.Ok) {
-                Console.WriteLine(string.Format(
-                    "Found {0} file at {1}",
-                    file.Type.ToString("g"),
-                    file.Name
-                ));
-            }
-        }
+        public int Count => _content.Count;
+        public List<string> FileList => new List<string>(_content.Keys);
 
         //
         // Summary:
@@ -44,26 +30,35 @@ namespace LibCap
         //     the type is not valid or the file was already contained in CapBuilder.
         // 
         public CapError AddAsset(string jsonPath, AssetType type) {
+            (List<CapUtils.FileData> Ok, CapError Error) filesResult = (null, CapError.NoError());
+            List<CapUtils.FileData> files = filesResult.Ok;
+
             switch (type) {
                 case AssetType.MAP:
-                    var filesResult = CapUtils.ParseMapFile(jsonPath);
+                    filesResult = CapUtils.ParseMapFile(jsonPath);
                     
-                    if (filesResult.Error.HasError) {
+                    if (!filesResult.Error.IsOk) {
                         return filesResult.Error;
                     }
 
-                    var files = filesResult.Ok;
-                    foreach (var file in files) {
-                        AddFile(file.Name, file.Type);
-                    }
-
-                    return CapError.NoError();
+                    files = filesResult.Ok;
+                    break;
                     
                 case AssetType.TILESET:
+                    filesResult = CapUtils.ParseTilesetFile(jsonPath);
+
+                    if (!filesResult.Error.IsOk) {
+                        return filesResult.Error;
+                    }
+
+                    files = filesResult.Ok;
                     break;
             }
+
+            foreach (var file in files) {
+                AddFile(file.Name, file.Type);
+            }
             
-            /* TODO */
             return CapError.NoError();
         }
 
