@@ -27,12 +27,12 @@ namespace LibCap.Tests
             Assert.AreEqual(5, builder.Count);
         }
         
-        public static void AddFile_BadDeps_Utils(string path, AssetType asset) {
+        public static void AddFile_Test_Utils(string path, AssetType asset, CapError.ErrorTypes expected_error) {
             var builder = new CapBuilder();
             var check = builder.AddAsset(path, asset);
             
             Assert.False(check.IsOk);
-            Assert.AreEqual(check.Type, CapError.ErrorTypes.FileNotFound);
+            Assert.AreEqual(check.Type, expected_error);
             
             Assert.False(builder.ContainsFile(path));
             Assert.AreEqual(0, builder.Count);
@@ -40,13 +40,13 @@ namespace LibCap.Tests
         
         [Test]
         public static void AddFile_BadDeps() {
-            AddFile_BadDeps_Utils(DG_TOCOCUMBA_BADDEPS1, AssetType.TILESET);
-            AddFile_BadDeps_Utils(DG_TOCOCUMBA_BADDEPS2, AssetType.MAP);
+            AddFile_Test_Utils(DG_TOCOCUMBA_BADDEPS1, AssetType.TILESET, CapError.ErrorTypes.FileNotFound);
+            AddFile_Test_Utils(DG_TOCOCUMBA_BADDEPS2, AssetType.MAP, CapError.ErrorTypes.FileNotFound);
         }
         
         [Test]
         public static void AddFile_Invalid() {
-            AddFile_BadDeps_Utils(DG_TOCOCUMBA_INVALID, AssetType.MAP);
+            AddFile_Test_Utils(DG_TOCOCUMBA_INVALID, AssetType.MAP, CapError.ErrorTypes.FileIsInvalid);
         }
     }
 }
