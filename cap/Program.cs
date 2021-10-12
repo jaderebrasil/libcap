@@ -8,15 +8,22 @@ namespace cap
 {
     class Program
     {
-        private const string DG_TOCOCUMBA = "/home/jader/projs/dotnet/cap/LibCap.Tests/test_assets/json/Dungeon_tococumba.json";
+        public enum CommandType {
+            Compress,
+            Extract
+        }
         
         static void WriteUsage() {
-            Console.WriteLine("usage: cap target.cap -cmap map1.json map2.json -ctile tile1.json ...");
-            Console.WriteLine("Options:");
+            Console.WriteLine("usage compress: cap target.cap -cmap map1.json map2.json -ctile tile1.json ...");
+            Console.WriteLine("Compress Options:");
             Console.WriteLine("  -cmap:  compress map files");
             Console.WriteLine("  -ctile: compress tileset files");
             Console.WriteLine("  -cmeta: compress meta data files");
             Console.WriteLine("  -crpg:  compress rpg system files");
+            Console.WriteLine();
+            Console.WriteLine("usege extract: cap target.cap -edir outputDir");
+            Console.WriteLine("  -edir: extract to directory");
+            Console.WriteLine();
             Console.WriteLine();
         }
         
@@ -48,6 +55,7 @@ namespace cap
         static void Main(string[] args)
         {
             var builder = new CapBuilder();
+            CommandType cmd = CommandType.Compress;
             
             if (args.Length <= 2) {
                 WriteUsage();
@@ -78,6 +86,30 @@ namespace cap
                         pos++;
                         pos += AddFiles(args.Skip(pos), AssetType.RPGSYSTEM, ref builder);
                         break; 
+                        
+                    case "-edir":
+                        pos++;
+                        if (pos != 2) {
+                            Console.WriteLine("Export parameter -e can only used alone");
+                            WriteUsage();
+                            Environment.Exit(1);
+                        }
+                        
+                        cmd = CommandType.Extract;
+                        string outputDir = args[pos];
+                        pos++;
+                        
+                        if (!Directory.Exists(outputDir))
+                            Directory.CreateDirectory(outputDir);
+                        
+                        var res = builder.ExtractCap(targetFile, outputDir, true); 
+                        if (!res.IsOk) {
+                            Console.WriteLine(res.Msg);
+                            Environment.Exit(1);
+                        } else {
+                            Console.WriteLine("Done.");
+                        }
+                        break;
                     
                     default:
                         WriteUsage();
@@ -86,12 +118,12 @@ namespace cap
                 }
             } while (pos < args.Length);
 
-
-            if (builder.ExportCap(targetFile, true))
-                Console.WriteLine("Done.");
-            else
-                Console.WriteLine("Something went wrong.");
-
+            if (cmd == CommandType.Compress) {
+                if (builder.ExportCap(targetFile, true))
+                    Console.WriteLine("Done.");
+                else
+                    Console.WriteLine("Something went wrong.");
+            }
         }
     }
 }

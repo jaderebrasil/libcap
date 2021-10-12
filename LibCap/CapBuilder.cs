@@ -263,13 +263,37 @@ namespace LibCap
             return true;
         }
         
+        public void AddAssetsFromDir(string assetPath, AssetType assetType) {
+            if (!Directory.Exists(assetPath))
+                return;
+
+            foreach (var filePath in Directory.GetFiles(assetPath)) {
+                AddAsset(filePath, assetType);
+            }
+        }
+
         //
         // Summary:
-        //     Import all files in a .cap and return a CapBuilder 
-        //     with all files in it.
+        //     Import all files in a .cap        
         // 
-        public static CapBuilder FromCap(string path) {
-            return new CapBuilder(); 
+        public CapError ImportCap(string path) {
+            string tmpExpPath = ".tmp/CapBuilder.Extract";
+
+            if (Directory.Exists(tmpExpPath))
+                Directory.Delete(tmpExpPath, true);
+            
+            Directory.CreateDirectory(tmpExpPath);
+
+            var check = ExtractCap(path, tmpExpPath, true);
+            if (!check.IsOk)
+                return check;
+            
+            AddAssetsFromDir(string.Format("{0}/{1}", tmpExpPath, "Maps"), AssetType.MAP);
+            AddAssetsFromDir(string.Format("{0}/{1}", tmpExpPath, "Tilesets"), AssetType.TILESET);
+            AddAssetsFromDir(string.Format("{0}/{1}", tmpExpPath, "Meta"), AssetType.MAP);
+            AddAssetsFromDir(string.Format("{0}/{1}", tmpExpPath, "RPGSys"), AssetType.MAP);
+
+            return CapError.NoError();
         }
         
         //
@@ -277,11 +301,25 @@ namespace LibCap
         //     Extract all files in a .cap file to a given `path`.
         //
         // Returns:
-        //     True if the extraction was successful. If `fReplace = true`
-        //     any collided files will be deleted and replaced.
+        //     True if the extraction was successful.
         // 
-        public bool ExtractCap(string capPath, string dstPath, bool fReplace) {
-            return false;
+        public CapError ExtractCap(string capPath, string dstPath, bool overwriteFiles) {
+            if (!File.Exists(capPath)) {
+                return new CapError(
+                    CapError.ErrorTypes.FileNotFound,
+                    string.Format("{0} file not found.", capPath)
+                );
+            }
+            
+            if (!Directory.Exists(dstPath)) {
+                return new CapError(
+                    CapError.ErrorTypes.FileNotFound,
+                    string.Format("{0} directoty not found.", capPath)
+                );
+            }
+
+            ZipFile.ExtractToDirectory(capPath, dstPath, overwriteFiles);
+            return CapError.NoError();
         }
     }
 }
