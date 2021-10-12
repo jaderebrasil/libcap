@@ -14,7 +14,8 @@ namespace LibCap {
     
     internal enum FileType {
         JSON,
-        PNG
+        PNG,
+        ANY
     }
 
     internal struct FileData
@@ -45,6 +46,14 @@ namespace LibCap {
                 case AssetType.TILESET:
                     AssetDir = "Tilesets/";
                     break;
+                    
+                case AssetType.RPGSYSTEM:
+                    AssetDir = "RPGSys/";
+                    break;
+                    
+                case AssetType.META:
+                    AssetDir = "Meta/";
+                    break;
             }
         }
     }
@@ -71,6 +80,9 @@ namespace LibCap {
                     if (path.Length > 4)
                         return path.Substring(path.Length - 4).Equals(".png");
                     break;
+                    
+                case FileType.ANY:
+                    return true;
             }
             
             return false;
@@ -101,6 +113,9 @@ namespace LibCap {
                     if (path.Length > 4 && path.Substring(path.Length - 4).Equals(".png"))
                         return CapError.NoError();
                     break;
+
+                case FileType.ANY:
+                    return CapError.NoError();
             }
             
             return new CapError(

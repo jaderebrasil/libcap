@@ -110,13 +110,14 @@ namespace LibCap
         //     It fails if the file or its dependents doesn't exists, 
         //     the type is not valid or the file was already contained in CapBuilder.
         // 
-        public CapError AddAsset(string jsonPath, AssetType type) {
+        public CapError AddAsset(string filePath, AssetType type) {
             (List<FileData> Ok, CapError Error) filesResult = (null, CapError.NoError());
             List<FileData> files = filesResult.Ok;
+            CapError check;
 
             switch (type) {
                 case AssetType.MAP:
-                    filesResult = CapUtils.ParseMapFile(jsonPath);
+                    filesResult = CapUtils.ParseMapFile(filePath);
                     
                     if (!filesResult.Error.IsOk) {
                         return filesResult.Error;
@@ -126,7 +127,7 @@ namespace LibCap
                     break;
                     
                 case AssetType.TILESET:
-                    filesResult = CapUtils.ParseTilesetFile(jsonPath);
+                    filesResult = CapUtils.ParseTilesetFile(filePath);
 
                     if (!filesResult.Error.IsOk) {
                         return filesResult.Error;
@@ -134,7 +135,41 @@ namespace LibCap
 
                     files = filesResult.Ok;
                     break;
-            } foreach (var file in files) {
+                    
+                case AssetType.META:
+                    check = CapUtils.VerifyFileForErrors(filePath, FileType.ANY);
+                    if (!check.IsOk) {
+                        return check;
+                    }
+                    
+                    files = new List<FileData>();
+                    files.Add(new FileData(
+                        filePath,
+                        FileType.ANY,
+                        AssetType.META,
+                        ""
+                    ));
+                    
+                    break;
+                
+                case AssetType.RPGSYSTEM:
+                    check = CapUtils.VerifyFileForErrors(filePath, FileType.JSON);
+                    if (!check.IsOk) {
+                        return check; 
+                    }
+                    
+                    files = new List<FileData>();
+                    files.Add(new FileData(
+                        filePath,
+                        FileType.JSON,
+                        AssetType.RPGSYSTEM,
+                        ""
+                    ));
+                    
+                    break;
+            }
+            
+            foreach (var file in files) {
                 AddFile(file);
             }
             
