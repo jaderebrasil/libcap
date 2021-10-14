@@ -48,11 +48,8 @@ namespace LibCap
                             try {
                                 var tileFile = _content.First(f => f.Value.Type == FileType.JSON
                                              && string.Equals(f.Value.AssetName, assetName));
-                                
-                                ts["source"] = Path.GetRelativePath(
-                                    Path.GetFullPath("Maps", _tmpPath), 
-                                    tileFile.Value.TmpPath(_tmpPath)
-                                );
+
+                                ts["source"] = tileFile.Value.RelativeTmpPath;
                             } catch {
                                 return false;
                             }
