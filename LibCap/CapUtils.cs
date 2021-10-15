@@ -26,9 +26,13 @@ namespace LibCap {
         public readonly AssetType Asset;
         public readonly string AssetDir;
         public readonly string AssetName;
+        public List<string> Deps; 
 
         public string RelativeTmpPath => string.Format("{0}{1}{2}", AssetDir, AssetName, Name);
+        public string RelativeTmpParent => string.Format("{0}{1}", AssetDir, AssetName);
         public string TmpPath(string tmpPath) => Path.GetFullPath(RelativeTmpPath, tmpPath);
+        public string TmpParent(string tmpPath) => Path.GetFullPath(RelativeTmpParent, tmpPath);
+        
         public FileData(string path, FileType type, AssetType asset, string assetName)
         {
             Name = Path.GetFileName(path);
@@ -36,6 +40,7 @@ namespace LibCap {
             Type = type;
             Asset = asset;
             AssetName = assetName;
+            Deps = new List<string>();
             
             AssetDir = "";
             switch (asset) {
@@ -175,7 +180,10 @@ namespace LibCap {
                     return (null, tilesetResult.Error);
                 }
 
-                res.AddRange(tilesetResult.Ok);
+                foreach (var file in tilesetResult.Ok) {
+                    file.Deps.Add(jsonPath);
+                    res.Add(file);
+                }
             }
             
             res.Add(new FileData(jsonPath, FileType.JSON, AssetType.MAP, ""));
