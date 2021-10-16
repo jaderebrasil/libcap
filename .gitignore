@@ -11,3 +11,5 @@ org
 */.tmp
 
 *.zip
+
+cap/mono_crash*

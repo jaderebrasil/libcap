@@ -11,9 +11,11 @@ namespace LibCap.Json {
             public string source;
         }
         public List<JsonTileset> tilesets;
+        public string type;
     }
     
     public class CapJsonTileset {
        public string image;
+       public string type;
     }
 }

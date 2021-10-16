@@ -160,6 +160,13 @@ namespace LibCap {
             string json = File.ReadAllText(jsonPath);
             var map = JsonConvert.DeserializeObject<CapJson.CapJsonMap>(json);
 
+            if (map == null || !map.type.Equals("map") || map.tilesets == null) {
+                return (null, new CapError(
+                    CapError.ErrorTypes.FileIsInvalid,
+                    string.Format("{0} isn't a valid map file.", jsonPath)  
+                ));
+            }
+
             foreach (var tileset in map.tilesets) {
                 var source = tileset.source;
                 var len = source.Length;
@@ -200,6 +207,13 @@ namespace LibCap {
             
             string json = File.ReadAllText(jsonPath);
             var tileset = JsonConvert.DeserializeObject<CapJson.CapJsonTileset>(json);
+            
+            if (tileset == null || !tileset.type.Equals("tileset")) {
+                return (null, new CapError(
+                    CapError.ErrorTypes.FileIsInvalid,
+                    string.Format("{0} isn't a valid tileset file.", jsonPath)  
+                ));
+            }
 
             var parentDir = Directory.GetParent(jsonPath).FullName;
             
