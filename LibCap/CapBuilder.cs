@@ -28,13 +28,13 @@ namespace LibCap
             Directory.CreateDirectory(_tmpPath);
         }
 
-        public CapBuilder(string tmpPath, bool autoDeleteTmp = true)
+        public CapBuilder(string tmpPath, bool autoDeleteTmp = true, bool cleanTmpOnCreate = true)
         {
             _content = new Dictionary<string, FileData>();
             _tmpPath = tmpPath;
             _autoDeleteTmp = autoDeleteTmp;
 
-            if (Directory.Exists(_tmpPath))
+            if (Directory.Exists(_tmpPath) && cleanTmpOnCreate)
             {
                 Directory.Delete(_tmpPath, true);
             }
@@ -448,6 +448,28 @@ namespace LibCap
             return CapError.NoError();
         }
 
+        //
+        // Summary:
+        //     Import all files in a path, set autodelete to false and this path
+        //     will be used as temporary path.
+        // 
+        public CapError ImportPath(string path)
+        {
+            if (!Directory.Exists(path))
+                return new CapError(
+                    CapError.ErrorTypes.FileNotFound,
+                    string.Format("{0} not exists.", path)
+                );
+            
+            AddAssetsFromDir(string.Format("{0}/{1}", path, "Maps"), AssetType.MAP);
+            AddAssetsFromDir(string.Format("{0}/{1}", path, "Tilesets"), AssetType.TILESET);
+            AddAssetsFromDir(string.Format("{0}/{1}", path, "Meta"), AssetType.MAP);
+            AddAssetsFromDir(string.Format("{0}/{1}", path, "RPGSys"), AssetType.MAP);
+
+            return CapError.NoError();
+        }
+
+        
         //
         // Summary:
         //     Extract all files in a .cap file to a given `path`.
