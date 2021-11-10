@@ -442,8 +442,8 @@ namespace LibCap
 
             AddAssetsFromDir(string.Format("{0}/{1}", tmpExpPath, "Maps"), AssetType.MAP);
             AddAssetsFromDir(string.Format("{0}/{1}", tmpExpPath, "Tilesets"), AssetType.TILESET);
-            AddAssetsFromDir(string.Format("{0}/{1}", tmpExpPath, "Meta"), AssetType.MAP);
-            AddAssetsFromDir(string.Format("{0}/{1}", tmpExpPath, "RPGSys"), AssetType.MAP);
+            AddAssetsFromDir(string.Format("{0}/{1}", tmpExpPath, "Meta"), AssetType.META);
+            AddAssetsFromDir(string.Format("{0}/{1}", tmpExpPath, "RPGSys"), AssetType.RPGSYSTEM);
 
             return CapError.NoError();
         }
@@ -463,8 +463,8 @@ namespace LibCap
             
             AddAssetsFromDir(string.Format("{0}/{1}", path, "Maps"), AssetType.MAP);
             AddAssetsFromDir(string.Format("{0}/{1}", path, "Tilesets"), AssetType.TILESET);
-            AddAssetsFromDir(string.Format("{0}/{1}", path, "Meta"), AssetType.MAP);
-            AddAssetsFromDir(string.Format("{0}/{1}", path, "RPGSys"), AssetType.MAP);
+            AddAssetsFromDir(string.Format("{0}/{1}", path, "Meta"), AssetType.META);
+            AddAssetsFromDir(string.Format("{0}/{1}", path, "RPGSys"), AssetType.RPGSYSTEM);
 
             return CapError.NoError();
         }
